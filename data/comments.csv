@@ -1,0 +1,7 @@
+comment_id,content,timestamp,sentiment_score,reply_count,author_id,post_id
+CM1,"Great insights on AI development!",2024-03-02T09:15:00Z,0.85,3,U2,P1
+CM2,"Interesting perspective on cloud technologies",2024-03-04T14:20:00Z,0.75,2,U1,P3
+CM3,"This visualization approach is revolutionary",2024-03-03T12:30:00Z,0.92,5,U3,P2
+CM4,"Very helpful security guidelines",2024-03-05T14:30:00Z,0.88,1,U4,P5
+CM5,"The framework comparison is exactly what I needed",2024-03-04T10:45:00Z,0.95,4,U5,P4
+

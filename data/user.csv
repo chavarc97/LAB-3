@@ -1,0 +1,6 @@
+username,email,bio,join_date,is_admin,influence_score,location,user_id
+tech_innovator,innovator@example.com,"Tech enthusiast and AI researcher",2024-01-15T10:00:00Z,false,8.5,"37.7749,-122.4194",U1
+data_scientist,scientist@example.com,"Data science expert and ML practitioner",2024-01-10T14:30:00Z,true,9.2,"40.7128,-74.0060",U2
+cloud_engineer,cloud.eng@example.com,"Cloud infrastructure specialist",2024-01-20T09:00:00Z,false,7.8,"51.5074,-0.1278",U3
+cloud_architect,cloud@example.com,"Enterprise architecture expert",2024-01-20T16:00:00Z,false,8.1,"48.8566,2.3522",U4
+network_expert,network@example.com,"Network security specialist",2024-01-25T09:45:00Z,false,8.7,"35.6762,139.6503",U5

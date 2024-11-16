@@ -1,0 +1,12 @@
+follower_id,followed_id
+U1,U2
+U1,U3
+U2,U1
+U2,U3
+U3,U1
+U3,U2
+U4,U1
+U4,U2
+U5,U1
+U5,U2
+U5,U3

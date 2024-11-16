@@ -4,10 +4,12 @@ import json
 import datetime
 import data_parser
 
+def create_schema(client):
+    schema = data_parser.DGraphCSVLoader(client)
+    schema.set_schema()
 
 def create_data(client):
     loader = data_parser.DGraphCSVLoader(client)
-    loader.set_schema()
     loader.load_data("./data")
     
     

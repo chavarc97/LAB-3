@@ -2,8 +2,8 @@ import pydgraph
 import pandas as pd
 import json
 import logging
-from typing import Dict, List, Any
-from pathlib import Path
+from typing import Dict
+
 
 class DGraphCSVLoader:
     def __init__(self, client):

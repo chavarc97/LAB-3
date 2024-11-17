@@ -14,6 +14,11 @@ def create_data(client):
 def drop_data(client):
     deletion = data_parser.DGraphCSVLoader(client)
     deletion.delete_all_data()
+    
+#delete data using a condition
+def delete_condition(client):
+    deletion = data_parser.DGraphCSVLoader(client)
+    deletion.delete_users_by_condition()
 
 #queries
 
@@ -25,7 +30,7 @@ def find_influential_users(client, min_influence: float):
             username
             influenceScore
             location
-            popularPosts: posts @filter(gt(viewCount, 100)) {
+            popularPosts: ~posts @filter(gt(viewCount, 100)) (orderdesc: viewCount) {
                 uid
                 content
                 viewCount
@@ -55,13 +60,13 @@ def get_trending_hashtags(client, min_trend_score: float = 7.5, hashtag_limit: i
         """
     query = """
         query trending($min_trend_score: float, $hashtag_limit: int, $post_limit: int) {
-            trendingHashtags(func: gt(trendScore, $min_trend_score), first: $hashtag_limit) {
+            trendingHashtags(func: gt(trendScore, $min_trend_score), first: $hashtag_limit ) {
                 uid
                 name
                 trendScore
                 useCount
                 relatedPosts: ~hashtags @filter(gt(engagementScore, 0.8)) 
-                (first: $post_limit) {
+                (orderdesc: engagementScore, first: $post_limit) {
                     uid
                     content
                     engagementScore

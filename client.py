@@ -2,6 +2,25 @@ import os
 import pydgraph
 import model
 
+"""
+*********************************************************************************************************************
+*************************************** CONCLUSION ******************************************************************
+*********************************************************************************************************************
+FOR THIS PROJECT, I HAVE CREATED A CLIENT.PY FILE THAT WILL BE USED TO INTERACT WITH THE DGRAPH DATABASE.
+IT WAS A BIT CHALLENGING TO ORGANIZE THE CODE IN A WAY THAT IT WILL BE EASY TO READ AND UNDERSTAND.
+ALSO, I HAD TO MAKE SURE THAT THE CODE IS WELL COMMENTED AND THE FUNCTIONS ARE WELL DOCUMENTED.
+I ENCOUNTER A FEW ERRORS WHILE TESTING THE CODE, BUT I WAS ABLE TO FIX THEM.
+BUT AT THE END EVERYTHING WORKED FINE AND I WAS ABLE TO CREATE A CLIENT.PY FILE THAT WILL BE USED TO INTERACT WITH THE DGRAPH DATABASE.
+
+In conclusion, this project has allowed me to gain practical experience with DGraph, a powerful graph database, 
+and its capabilities in managing and querying complex data structures. Throughout the development process, 
+I focused on creating and maintaining a schema, loading and deleting data, and implementing various queries 
+to retrieve influential users, trending hashtags, and user networks. The project has helped me improve my understanding 
+of graph-based data modeling, including reverse relationships and numeric indexing. It also deepened my skills in handling
+large datasets and efficiently querying them using DGraph's query language. Overall, this project was a valuable learning experience, 
+and I look forward to applying these skills in future projects.
+"""
+
 
 DGRAPH_URI = os.getenv('DGRAPH_URI', 'localhost:9080')
 
@@ -11,7 +30,7 @@ def print_menu():
     mm_options = {
         1: "Create data",
         2: "Query data",
-        3: "Delete person",
+        3: "Delete users with influenceScore less than a given threshold. i.e. > 5.0",
         4: "Drop All",
         5: "Exit",
     }
@@ -95,7 +114,7 @@ def main():
         if option == 2:
             query_menu(client)
         if option == 3:
-            pass
+            model.delete_condition(client)
         if option == 4:
             model.drop_data(client)
         if option == 5:

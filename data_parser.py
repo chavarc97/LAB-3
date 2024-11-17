@@ -102,7 +102,7 @@ class DGraphCSVLoader:
             influenceScore: float @index(float) .
             location: geo @index(geo) .
             follows: [uid] @reverse .
-            posts: [uid] .
+            posts: [uid] @reverse .
             comments: [uid] .
             communities: [uid] .
             content: string @index(fulltext) .
@@ -111,7 +111,7 @@ class DGraphCSVLoader:
             engagementScore: float @index(float) .
             author: uid .
             likedBy: [uid] .
-            hashtags: [uid] .
+            hashtags: [uid] @reverse .
             sentimentScore: float @index(float) .
             replyCount: int .
             post: uid .
@@ -470,3 +470,39 @@ class DGraphCSVLoader:
         return self.client.alter(pydgraph.Operation(drop_all=True))
     
     
+    # delete data using a condition
+    def delete_users_by_condition(self, min_influence: float = 5.0):
+        """
+        Delete users with influenceScore less than a given threshold.
+        """
+        query = """
+        query findUsers($min_influence: float) {
+            usersToDelete(func: lt(influenceScore, $min_influence)) {
+                uid
+            }
+        }
+        """
+        variables = {
+            '$min_influence': str(min_influence)
+        }
+
+        try:
+            # Step 1: Query users that match the condition
+            res = self.client.txn(read_only=True).query(query, variables=variables)
+            result = json.loads(res.json)
+            
+            # Step 2: Prepare the mutation for deletion
+            users_to_delete = result.get("usersToDelete", [])
+            if users_to_delete:
+                uids_to_delete = [user["uid"] for user in users_to_delete]
+                mutation = {
+                    "delete": [{"uid": uid} for uid in uids_to_delete]
+                }
+                # Step 3: Perform the delete mutation
+                self.client.txn().mutate(set_json=mutation)
+                print(f"Deleted {len(uids_to_delete)} users.")
+            else:
+                print("No users found to delete.")
+
+        except Exception as e:
+            print(f"Error deleting users: {str(e)}")

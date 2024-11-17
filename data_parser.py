@@ -4,64 +4,94 @@ import json
 import logging
 from typing import Dict
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 class DGraphCSVLoader:
     def __init__(self, client):
         """Initialize with a pydgraph client"""
         self.client = client
         self.logger = logging.getLogger(__name__)
+        self.user_uid_map = {}
+        self.community_uid_map = {}
+        self.post_uid_map = {}
+        self.hashtag_uid_map = {}
+        self.comments_map = {}
         
     def set_schema(self):
         """Set up the schema for the social network"""
         schema = """
             # Type definitions
             type User {
-                username: string @index(exact) .
-                email: string @index(exact) .
-                bio: string @index(fulltext) .
-                joinDate: datetime .
-                isAdmin: bool .
-                influenceScore: float @index(float) .
-                location: geo @index(geo) .
-                follows: [uid] @reverse .
-                posts: [uid] .
-                comments: [uid] .
-                communities: [uid] .
+                username
+                email
+                bio
+                joinDate
+                isAdmin
+                influenceScore
+                location
+                follows: [uid]
+                posts: [uid]
+                comments: [uid]
+                communities: [uid]
             }
 
             type Post {
-                content: string @index(fulltext) .
-                timestamp: datetime .
-                viewCount: int @index(int) .
-                engagementScore: float @index(float) .
-                author: uid .
-                likedBy: [uid] .
-                hashtags: [uid] .
-                comments: [uid] .
+                content
+                timestamp
+                viewCount
+                engagementScore
+                author: uid
+                likedBy: [uid] 
+                hashtags: [uid] 
+                comments: [uid] 
             }
 
             type Comment {
-                content: string @index(fulltext) .
-                timestamp: datetime .
-                sentimentScore: float @index(float) .
-                replyCount: int .
-                author: uid .
-                post: uid .
+                content
+                timestamp
+                sentimentScore
+                replyCount
+                author: uid 
+                post: uid 
             }
 
             type Community {
-                name: string @index(exact) .
-                category: string @index(exact) .
-                memberCount: int @index(int) .
-                members: [uid] @reverse .
+                name
+                category
+                memberCount
+                members
             }
 
             type Hashtag {
-                name: string @index(exact) .
-                useCount: int @index(int) .
-                trendScore: float @index(float) .
-                posts: [uid] .
+                name
+                useCount
+                trendScore
+                posts: [uid] 
             }
+            
+            type Follows {
+                follower: uid 
+                followed: uid 
+            }
+            
+            type CommunityMember {
+                community: uid 
+                member: uid 
+            }
+            
+            type PostHashtag {
+                post: uid 
+                hashtag: uid 
+            }
+            
+            type PostLike {
+                post: uid 
+                user: uid 
+            }
+            
 
             # Predicate definitions
             username: string @index(exact) .
@@ -71,29 +101,53 @@ class DGraphCSVLoader:
             isAdmin: bool .
             influenceScore: float @index(float) .
             location: geo @index(geo) .
+            follows: [uid] @reverse .
+            posts: [uid] .
+            comments: [uid] .
+            communities: [uid] .
             content: string @index(fulltext) .
             timestamp: datetime .
             viewCount: int @index(int) .
             engagementScore: float @index(float) .
+            author: uid .
+            likedBy: [uid] .
+            hashtags: [uid] .
             sentimentScore: float @index(float) .
             replyCount: int .
-            name: string @index(exact) .
+            post: uid .
+            name: string @index(hash) .
             category: string @index(exact) .
             memberCount: int @index(int) .
+            members: [uid] @reverse .
             useCount: int @index(int) .
             trendScore: float @index(float) .
+            follower: uid .
+            followed: uid .
+            community: uid .
+            member: uid .
+            hashtag: uid .
+            user: uid .
         """
         return self.client.alter(pydgraph.Operation(schema=schema))
     
     def load_data(self, data_dir: str):
         """Load all CSV files from the directory"""
         try:
-            # Process base nodes first
-            users = self._load_users(f"{data_dir}/users.csv")
-            communities = self._load_communities(f"{data_dir}/communities.csv")
-            posts = self._load_posts(f"{data_dir}/posts.csv")
-            hashtags = self._load_hashtags(f"{data_dir}/hashtags.csv")
-            comments = self._load_comments(f"{data_dir}/comments.csv")
+                # Process base nodes first
+            self.user_uid_map = self._load_users(f"{data_dir}/user.csv")
+            self.logger.info(f"Loaded {len(self.user_uid_map)} users")
+            
+            self.community_uid_map = self._load_communities(f"{data_dir}/communities.csv")
+            self.logger.info(f"Loaded {len(self.community_uid_map)} communities")
+            
+            self.post_uid_map = self._load_posts(f"{data_dir}/post.csv", self.user_uid_map)
+            self.logger.info(f"Loaded {len(self.post_uid_map)} posts")
+            
+            self.hashtag_uid_map = self._load_hashtags(f"{data_dir}/hashtags.csv")
+            self.logger.info(f"Loaded {len(self.hashtag_uid_map)} hashtags")
+            
+            self.comments_map = self._load_comments(f"{data_dir}/comments.csv", self.user_uid_map, self.post_uid_map)
+            self.logger.info(f"Loaded {len(self.comments_map)} comments")
             
             # Process relationships
             self._load_follows(f"{data_dir}/user_follows.csv")
@@ -102,11 +156,11 @@ class DGraphCSVLoader:
             self._load_post_likes(f"{data_dir}/post_likes.csv")
             
             print("Data loaded successfully")
-            print(f"Users: {len(users)}")
-            print(f"Communities: {len(communities)}")
-            print(f"Posts: {len(posts)}")
-            print(f"Hashtags: {len(hashtags)}")
-            print(f"Comments: {len(comments)}")
+            print(f"Users: {len(self.user_uid_map)}")
+            print(f"Communities: {len(self.community_uid_map)}")
+            print(f"Posts: {len(self.post_uid_map)}")
+            print(f"Hashtags: {len(self.hashtag_uid_map)}")
+            print(f"Comments: {len(self.comments_map)}")
             print("Relationships loaded")
             
         except Exception as e:
@@ -131,35 +185,58 @@ class DGraphCSVLoader:
         df = pd.read_csv(file_path)
         uid_map = {}
         
+        self.logger.info(f"Loading {len(df)} users from {file_path}")
+        
         for _, row in df.iterrows():
-            # Create user node
-            user_data = {
-                "dgraph.type": "User",
-                "username": row['username'],
-                "email": row['email'],
-                "bio": row['bio'],
-                "joinDate": row['join_date'],
-                "isAdmin": row['is_admin'].lower() == 'true',
-                "influenceScore": float(row['influence_score'])
-            }
-            
-            # Handle location if present
-            if pd.notna(row['location']):
-                lat, lon = map(float, row['location'].split(','))
-                user_data["location"] = json.dumps({
-                    "type": "Point",
-                    "coordinates": [lon, lat]
-                })
-            
-            user_uid = row['user_id']
-            user_data["uid"] = json.dumps({
-                "user_id": user_uid
-            })
-            
-            # Create mutation and store mapping
-            assigned = self._create_mutation(user_data)
-            uid_map[row['user_id']] = assigned.uids[list(assigned.uids.keys())[0]]
-            
+            try:
+                # Create user node
+                user_data = {
+                    "dgraph.type": "User",
+                    "username": row['username'],
+                    "email": row['email'],
+                    "bio": row['bio'],
+                    "joinDate": row['join_date'],
+                    "isAdmin": bool(row['is_admin']),  # Ensure boolean type
+                    "influenceScore": float(row['influence_score'])
+                    # Removed user_id as it shouldn't be stored in dgraph
+                }
+                
+                # Handle location if present
+                if pd.notna(row['location']):
+                    try:
+                        lat, lon = map(float, row['location'].split(','))
+                        user_data["location"] = {
+                            "type": "Point",
+                            "coordinates": [lon, lat]
+                        }
+                    except ValueError as e:
+                        self.logger.warning(f"Invalid location format for user {row['user_id']}: {e}")
+                
+                # Create mutation and store mapping
+                assigned = self._create_mutation(user_data)
+                
+                # Get the assigned UID
+                if assigned.uids:
+                    uid = assigned.uids[list(assigned.uids.keys())[0]]
+                    uid_map[row['user_id']] = uid
+                    self.logger.debug(f"Created user {row['username']} (ID: {row['user_id']}) with UID: {uid}")
+                else:
+                    self.logger.error(f"No UID assigned for user {row['user_id']}")
+                    continue
+                    
+            except Exception as e:
+                self.logger.error(f"Error creating user {row['user_id']}: {str(e)}")
+                continue
+        
+        self.logger.info(f"Successfully loaded {len(uid_map)} users")
+        if len(uid_map) < len(df):
+            self.logger.warning(f"Failed to load {len(df) - len(uid_map)} users")
+        
+        # Debug output of the UID mapping
+        self.logger.debug("User ID to UID mapping:")
+        for user_id, uid in uid_map.items():
+            self.logger.debug(f"{user_id} -> {uid}")
+        
         return uid_map
     
     def _load_communities(self, file_path: str) -> Dict[str, str]:
@@ -181,26 +258,39 @@ class DGraphCSVLoader:
             
         return uid_map
 
-    def _load_posts(self, file_path: str) -> Dict[str, str]:
+    def _load_posts(self, file_path: str, user_uid_map: Dict[str, str]) -> Dict[str, str]:
         """Load posts from CSV"""
         df = pd.read_csv(file_path)
         uid_map = {}
         
         for _, row in df.iterrows():
+            # Check if author exists in user_uid_map
+            author_id = row['author_id']
+            if author_id not in user_uid_map:
+                self.logger.warning(f"Author ID {author_id} not found in user UID map. Skipping post.")
+                continue
+                
+            # Create post node with proper author UID reference
             post_data = {
                 "dgraph.type": "Post",
-                "post_id": row['post_id'],
                 "content": row['content'],
                 "timestamp": row['timestamp'],
                 "viewCount": int(row['view_count']),
                 "engagementScore": float(row['engagement_score']),
-                "author": row['author_id']
+                "author": {"uid": user_uid_map[author_id]}  # Proper UID reference format
             }
             
-            assigned = self._create_mutation(post_data)
-            uid_map[row['post_id']] = assigned.uids[list(assigned.uids.keys())[0]]
-            
+            # Create mutation and store mapping
+            try:
+                assigned = self._create_mutation(post_data)
+                uid = assigned.uids[list(assigned.uids.keys())[0]]
+                uid_map[row['post_id']] = uid
+            except Exception as e:
+                self.logger.error(f"Error creating post: {str(e)}")
+                continue
+        
         return uid_map
+
     
     def _load_hashtags(self, file_path: str) -> Dict[str, str]:
         """Load hashtags from CSV"""
@@ -222,25 +312,51 @@ class DGraphCSVLoader:
         return uid_map
     
     
-    def _load_comments(self, file_path: str) -> Dict[str, str]:
+    def _load_comments(self, file_path: str, user_uid_map: Dict[str, str], post_uid_map: Dict[str, str]) -> Dict[str, str]:
         """Load comments from CSV"""
         df = pd.read_csv(file_path)
         uid_map = {}
         
+        self.logger.info(f"Loading {len(df)} comments from {file_path}")
+        
         for _, row in df.iterrows():
-            comment_data = {
-                "dgraph.type": "Comment",
-                "comment_id": row['comment_id'],
-                "content": row['content'],
-                "timestamp": row['timestamp'],
-                "sentimentScore": float(row['sentiment_score']),
-                "replyCount": int(row['reply_count']),
-                "author": row['author_id'],
-                "post": row['post_id']
-            }
-            
-            assigned = self._create_mutation(comment_data)
-            uid_map[row['comment_id']] = assigned.uids[list(assigned.uids.keys())[0]]
+            try:
+                # Check if author exists in user_uid_map
+                author_id = row['author_id']
+                post_id = row['post_id']
+                
+                if author_id not in user_uid_map:
+                    self.logger.warning(f"Author ID {author_id} not found in user UID map. Skipping comment.")
+                    continue
+                    
+                if post_id not in post_uid_map:
+                    self.logger.warning(f"Post ID {post_id} not found in post UID map. Skipping comment.")
+                    continue
+                
+                # Create comment node with proper UID references
+                comment_data = {
+                    "dgraph.type": "Comment",
+                    "content": row['content'],
+                    "timestamp": row['timestamp'],
+                    "sentimentScore": float(row['sentiment_score']),
+                    "replyCount": int(row['reply_count']),
+                    "author": {"uid": user_uid_map[author_id]},  # Proper UID reference format
+                    "post": {"uid": post_uid_map[post_id]}      # Proper UID reference format
+                }
+                
+                # Create mutation and store mapping
+                assigned = self._create_mutation(comment_data)
+                uid = assigned.uids[list(assigned.uids.keys())[0]]
+                uid_map[row['comment_id']] = uid
+                self.logger.debug(f"Created comment for post {post_id} by author {author_id} with UID: {uid}")
+                
+            except Exception as e:
+                self.logger.error(f"Error creating comment: {str(e)}")
+                continue
+        
+        self.logger.info(f"Successfully loaded {len(uid_map)} comments")
+        if len(uid_map) < len(df):
+            self.logger.warning(f"Failed to load {len(df) - len(uid_map)} comments")
             
         return uid_map
     
@@ -250,14 +366,25 @@ class DGraphCSVLoader:
         df = pd.read_csv(file_path)
         
         for _, row in df.iterrows():
-            follow_data = {
-                "follower_id": row['follower_id'],
-                "followed_id": row['followed_id']
-            }
-            
-            assigned = self._create_mutation(follow_data)
-            
-        return assigned
+            try:
+                # Get UIDs for both users
+                follower_uid = self.user_uid_map[row['follower_id']]
+                followed_uid = self.user_uid_map[row['followed_id']]
+                
+                # Create the follows relationship using proper edge format
+                follow_data = {
+                    "uid": follower_uid,
+                    "follows": {
+                        "uid": followed_uid
+                    }
+                }
+                
+                self._create_mutation(follow_data)
+                
+            except KeyError as e:
+                self.logger.error(f"Missing UID mapping for user: {str(e)}")
+            except Exception as e:
+                self.logger.error(f"Error creating follows relationship: {str(e)}")
         
     
     def _load_community_members(self, file_path: str):
@@ -265,28 +392,51 @@ class DGraphCSVLoader:
         df = pd.read_csv(file_path)
         
         for _, row in df.iterrows():
-            member_data = {
-                "community_id": row['community_id'],
-                "user_id": row['user_id']
-            }
-            
-            assigned = self._create_mutation(member_data)
-            
-        return assigned
+            try:
+                # Get UIDs for community and user
+                community_uid = self.community_uid_map[row['community_id']]
+                member_uid = self.user_uid_map[row['user_id']]
+                
+                # Create the membership relationship
+                member_data = {
+                    "uid": community_uid,
+                    "members": {
+                        "uid": member_uid
+                    }
+                }
+                
+                self._create_mutation(member_data)
+                
+            except KeyError as e:
+                self.logger.error(f"Missing UID mapping: {str(e)}")
+            except Exception as e:
+                self.logger.error(f"Error creating community membership: {str(e)}")
+        
         
     def _load_post_hashtags(self, file_path: str):
         """Load post hashtags relationships"""
         df = pd.read_csv(file_path)
         
         for _, row in df.iterrows():
-            post_hashtag_data = {
-                "post_id": row['post_id'],
-                "hashtag_id": row['hashtag_id']
-            }
-            
-            assigned = self._create_mutation(post_hashtag_data)
-            
-        return assigned
+            try:
+                # Get UIDs for post and hashtag
+                post_uid = self.post_uid_map[row['post_id']]
+                hashtag_uid = self.hashtag_uid_map[row['hashtag_id']]
+                
+                # Create the hashtag relationship
+                hashtag_data = {
+                    "uid": post_uid,
+                    "hashtags": {
+                        "uid": hashtag_uid
+                    }
+                }
+                
+                self._create_mutation(hashtag_data)
+                
+            except KeyError as e:
+                self.logger.error(f"Missing UID mapping: {str(e)}")
+            except Exception as e:
+                self.logger.error(f"Error creating post-hashtag relationship: {str(e)}")
         
     
     def _load_post_likes(self, file_path: str):
@@ -294,14 +444,25 @@ class DGraphCSVLoader:
         df = pd.read_csv(file_path)
         
         for _, row in df.iterrows():
-            post_like_data = {
-                "post_id": row['post_id'],
-                "user_id": row['user_id']
-            }
-            
-            assigned = self._create_mutation(post_like_data)
-            
-        return assigned
+            try:
+                # Get UIDs for post and user
+                post_uid = self.post_uid_map[row['post_id']]
+                user_uid = self.user_uid_map[row['user_id']]
+                
+                # Create the like relationship
+                like_data = {
+                    "uid": post_uid,
+                    "likedBy": {
+                        "uid": user_uid
+                    }
+                }
+                
+                self._create_mutation(like_data)
+                
+            except KeyError as e:
+                self.logger.error(f"Missing UID mapping: {str(e)}")
+            except Exception as e:
+                self.logger.error(f"Error creating post-like relationship: {str(e)}")
     
     
     def delete_all_data(self):
